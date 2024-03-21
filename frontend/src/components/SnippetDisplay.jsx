@@ -6,60 +6,86 @@ import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
-import { fetchSnippets } from '../api/config';
+import Box from '@mui/material/Box';
+import Pagination from '@mui/material/Pagination'; 
+
+import { fetchSnippets } from '../api/config'; 
 
 const SnippetDisplay = () => {
   const [snippets, setSnippets] = useState([]);
+  const [page, setPage] = useState(1);
+  const itemsPerPage = 5;
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const response = await fetchSnippets();
-        debugger
+
         if (response.status === 200) {
-          setSnippets(response.result)
-          // Process the fetched data here
+          setSnippets(response.result);
         } else {
-          // Handle non-200 status codes (errors)
           console.error("Failed to fetch snippets:", response.status);
         }
       } catch (error) {
-        // Handle network or other errors
         console.error("Error fetching snippets:", error);
       }
     };
-  
-    fetchData(); // Call the async function 
+
+    fetchData(); 
   }, []);
-  
+
+  const handleChange = (event, value) => {
+    setPage(value);
+  };
 
   return (
-    <TableContainer component={Paper}>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Username</TableCell>
-            <TableCell>Code Language</TableCell>
-            <TableCell>stdin</TableCell>
-            <TableCell>Code (Truncated)</TableCell>
-            <TableCell>stdout</TableCell>
-            <TableCell>Timestamp</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {snippets.map((snippet) => (
-            <TableRow key={snippet.timestamp}>
-              <TableCell>{snippet.username}</TableCell>
-              <TableCell>{snippet.language}</TableCell>
-              <TableCell>{snippet.stdin}</TableCell>
-              <TableCell>{snippet.code.substring(0, 100)}...</TableCell> 
-              <TableCell>{snippet.output}</TableCell> 
-              <TableCell>{snippet.timestamp}</TableCell> 
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
+    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <Paper sx={{ width: '80%', maxWidth: '1000px', overflowX: 'auto' }}> 
+        <TableContainer sx={{ minHeight: 200 }}>
+          <Table size="small" stickyHeader> 
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ backgroundColor: 'black', color: 'white' }}>Sr. no</TableCell>
+                <TableCell sx={{ backgroundColor: 'black', color: 'white' }}>Username</TableCell>
+                <TableCell sx={{ backgroundColor: 'black', color: 'white' }}>Code Language</TableCell>
+                <TableCell sx={{ backgroundColor: 'black', color: 'white' }}>stdin</TableCell>
+                <TableCell sx={{ backgroundColor: 'black', color: 'white' }}>Code (Truncated)</TableCell> 
+                <TableCell sx={{ backgroundColor: 'black', color: 'white' }}>stdout</TableCell> 
+                <TableCell sx={{ backgroundColor: 'black', color: 'white' }}>Timestamp</TableCell> 
+              </TableRow>
+            </TableHead>
+            <TableBody>
+  {snippets
+    .slice((page - 1) * itemsPerPage, page * itemsPerPage) 
+    .map((snippet, index) => ( // Use index for serial number
+      <TableRow 
+        key={snippet.timestamp} 
+        sx={{ 
+          '&:nth-of-type(odd)': { backgroundColor: 'rgba(0, 0, 0, 0.04)' }, 
+          '&:last-child td, &:last-child th': { border: 0 } 
+        }}
+      >
+        <TableCell>{index + 1 + (page - 1) * itemsPerPage}</TableCell> {/* Serial Number */}
+        <TableCell>{snippet.username}</TableCell>
+        <TableCell>{snippet.language}</TableCell>
+        <TableCell>{snippet.stdin}</TableCell>
+        <TableCell>{snippet.code.substring(0, 100)}...</TableCell> 
+        <TableCell>{snippet.output}</TableCell> 
+        <TableCell>{snippet.timestamp}</TableCell> 
+      </TableRow>
+    ))}
+</TableBody>
+          </Table>
+        </TableContainer>
+
+        <Pagination 
+            count={Math.ceil(snippets.length / itemsPerPage)}  
+            page={page} 
+            onChange={handleChange} 
+            sx={{ mt: 2, display: 'flex', justifyContent: 'center' }} 
+        /> 
+      </Paper>
+    </Box>
   );
 };
 

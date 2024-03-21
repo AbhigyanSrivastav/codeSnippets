@@ -1,4 +1,6 @@
-const BASE_URL = 'http://localhost:3001';
+// const BASE_URL = 'http://localhost:3001'; //local
+const BASE_URL = 'http://54.206.69.107:5001'; //production
+
 
 const createSnippetApi = async (data) => {
   const response = await fetch(BASE_URL + '/snippets', {
