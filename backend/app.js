@@ -32,7 +32,7 @@ const dbConfig = {
 };
 
 const languageToJudge0Id = {
-  javascript: 63,
+    javascript: 63,
   python: 71,
   java: 62,
 };
@@ -179,7 +179,7 @@ app.post("/snippets", async (req, res, next) => {
 
     const response = await fetch(url, options);
     const submissionResult = await response.json();
-
+    
     if (submissionResult.token) {
       let submissionDetails = submissionResult;
 
@@ -195,7 +195,7 @@ app.post("/snippets", async (req, res, next) => {
             "X-RapidAPI-Host": "judge0-ce.p.rapidapi.com",
           },
         };
-
+        
         try {
           const fetchResponse = await fetch(fetchUrl, options);
           submissionDetails = await fetchResponse.json();
@@ -220,7 +220,7 @@ app.post("/snippets", async (req, res, next) => {
         const fetchResponse = await fetch(fetchUrl, options);
         submissionDetails = await fetchResponse.json();
       }
-
+      
       let output = base64Encoded
         ? Buffer.from(
             submissionDetails.stdout || submissionDetails.stderr || "",
