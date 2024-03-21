@@ -7,7 +7,8 @@ import fetch from "node-fetch";
 import { createClient } from "redis";
 import winston from "winston";
 
-// dotenv.config();
+// Load environment variables from .env file
+dotenv.config();
 
 const app = express();
 app.use(cors());
@@ -40,26 +41,29 @@ function determineLanguageId(language) {
   return languageToJudge0Id[language.toLowerCase()] || null;
 }
 
+// Initialize Redis client
 const redisClient = createClient({
-    password: 'EnKXczia5Cx16nkBEuNUzaikplhFfjnu',
-    socket: {
-        host: 'redis-16323.c11.us-east-1-3.ec2.cloud.redislabs.com',
-        port: 16323
-    }
+  password: process.env.REDIS_PASSWORD,
+  socket: {
+    host: process.env.REDIS_HOST,
+    port: process.env.REDIS_PORT,
+  },
 });
-redisClient.on("error", (err) => console.error("Redis error:", err));
 
-await redisClient.connect();
+// Handle Redis errors
+redisClient.on("error", (err) => logger.error("Redis error:", err));
 
-process.on("beforeExit", async () => {
+// Connect to Redis
+(async () => {
   try {
-    await redisClient.quit();
-    console.log("Redis client disconnected.");
+    await redisClient.connect();
+    logger.info("Connected to Redis");
   } catch (err) {
-    console.error("Error disconnecting Redis client:", err);
+    logger.error("Error connecting to Redis:", err);
   }
-});
+})();
 
+// Graceful shutdown for Redis
 process.on("SIGTERM", async () => {
   logger.info("Received SIGTERM, shutting down gracefully...");
   try {
@@ -71,7 +75,20 @@ process.on("SIGTERM", async () => {
     process.exit(0);
   }
 });
+
 const pool = mysql.createPool(dbConfig);
+
+// Graceful shutdown for MySQL
+process.on("SIGTERM", async () => {
+  try {
+    await pool.end();
+    logger.info("MySQL connection pool closed.");
+  } catch (err) {
+    logger.error("Error closing MySQL connection pool:", err);
+  } finally {
+    process.exit(0);
+  }
+});
 
 // Input Validation
 function validateSnippetInput(data) {
@@ -80,7 +97,7 @@ function validateSnippetInput(data) {
   }
 
   if (!validator.isLength(data.username, { min: 1, max: 100 })) {
-    throw new Error("username must be between 1 and 100 characters.");
+    throw new Error("Username must be between 1 and 100 characters.");
   }
 
   if (!validator.isLength(data.code, { min: 1, max: 10000 })) {
@@ -97,21 +114,26 @@ function sanitizeInput(input) {
   return input.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: "Something went wrong." });
-});
+// Error handling middleware
+function errorHandler(err, req, res, next) {
+  logger.error(err.stack);
+  res.status(500).json({ error: "Internal server error" });
+}
+
+app.use(errorHandler);
 
 app.get("/snippets", async (req, res, next) => {
   try {
     const cachedSnippets = await redisClient.get("codeSnippets");
 
     if (cachedSnippets) {
-      res.status(200).json({status:200,result:JSON.parse(cachedSnippets)});
+      res.status(200).json({ status: 200, result: JSON.parse(cachedSnippets) });
     } else {
-      const [rows] = await pool.execute(`SELECT * FROM ${process.env.TABLE_NAME}`);
+      const [rows] = await pool.execute(
+        `SELECT * FROM ${process.env.TABLE_NAME}`
+      );
       redisClient.setEx("codeSnippets", 60, JSON.stringify(rows));
-      res.status(200).json({status:200,result:rows});
+      res.status(200).json({ status: 200, result: rows });
     }
   } catch (err) {
     next(err);
@@ -157,7 +179,7 @@ app.post("/snippets", async (req, res, next) => {
 
     const response = await fetch(url, options);
     const submissionResult = await response.json();
-    
+
     if (submissionResult.token) {
       let submissionDetails = submissionResult;
 
@@ -178,7 +200,7 @@ app.post("/snippets", async (req, res, next) => {
           const fetchResponse = await fetch(fetchUrl, options);
           submissionDetails = await fetchResponse.json();
         } catch (error) {
-          console.error("Error fetching initial submission details:", error);
+          logger.error("Error fetching initial submission details:", error);
         }
       }
 
@@ -207,15 +229,17 @@ app.post("/snippets", async (req, res, next) => {
         : submissionDetails.stdout || submissionDetails.stderr;
 
       const result = await pool.execute(
-        `INSERT INTO ${process.env.TABLE_NAME} (username,stdin, code, language, output) VALUES (?, ?, ?, ?,?)`,
+        `INSERT INTO ${process.env.TABLE_NAME} (username, stdin, code, language, output) VALUES (?, ?, ?, ?, ?)`,
         [sanitizedUsername, sanitizedStdin, sanitizedCode, language, output]
       );
 
       await redisClient.del("codeSnippets");
 
-      res.status(200).json({status:200,"message":"code snippet added succesfully"})
+      res
+        .status(200)
+        .json({ status: 200, message: "Code snippet added successfully" });
     } else {
-      res.status(400).json({status:400, error: "Failed to create submission" });
+      res.status(400).json({ status: 400, error: "Failed to create submission" });
     }
   } catch (err) {
     if (
@@ -226,11 +250,10 @@ app.post("/snippets", async (req, res, next) => {
     ) {
       res.status(400).json({ error: err.message });
     } else {
-      logger.error(err.stack);
-      res.status(500).json({ error: "Internal server error" });
+      next(err);
     }
   }
 });
 
 const PORT = process.env.PORT || 5002;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => logger.info(`Server running on port ${PORT}`));
