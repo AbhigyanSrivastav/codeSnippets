@@ -7,7 +7,7 @@ import fetch from "node-fetch";
 import { createClient } from "redis";
 import winston from "winston";
 
-dotenv.config();
+// dotenv.config();
 
 const app = express();
 app.use(cors());
