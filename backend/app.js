@@ -41,10 +41,10 @@ function determineLanguageId(language) {
 }
 
 const redisClient = createClient({
-    password: `${process.env.REDIS_PASSWORD}`,
+    password: 'EnKXczia5Cx16nkBEuNUzaikplhFfjnu',
     socket: {
-        host: `${process.env.REDIS_HOST}`,
-        port: process.env.REDIS_PORT
+        host: 'redis-16323.c11.us-east-1-3.ec2.cloud.redislabs.com',
+        port: 16323
     }
 });
 redisClient.on("error", (err) => console.error("Redis error:", err));
@@ -232,5 +232,5 @@ app.post("/snippets", async (req, res, next) => {
   }
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 5002;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
