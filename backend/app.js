@@ -220,7 +220,7 @@ app.post("/snippets", async (req, res, next) => {
         const fetchResponse = await fetch(fetchUrl, options);
         submissionDetails = await fetchResponse.json();
       }
-      
+      if (submissionDetails.status.id <= 3 && submissionDetails.status.description === 'Accepted') {
       let output = base64Encoded
         ? Buffer.from(
             submissionDetails.stdout || submissionDetails.stderr || "",
@@ -238,8 +238,12 @@ app.post("/snippets", async (req, res, next) => {
       res
         .status(200)
         .json({ status: 200, message: "Code snippet added successfully" });
-    } else {
-      res.status(400).json({ status: 400, error: "Failed to create submission" });
+    } else{
+      res.status(400).json({ status: 400, error: "Failed to create submission.Please check for typos in your code" });
+      
+    }
+  }else {
+      res.status(400).json({ status: 400, error: "Failed to create submission." });
     }
   } catch (err) {
     if (

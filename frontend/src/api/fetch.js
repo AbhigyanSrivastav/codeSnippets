@@ -1,5 +1,6 @@
-// const BASE_URL = 'http://localhost:3001'; //local
-const BASE_URL = 'http://54.206.69.107:5001'; //production
+// const BASE_URL = 'http://localhost:5001'; //local
+// const BASE_URL = 'http://54.206.69.107:5001'; //production
+const BASE_URL = '/api'; //netlify
 
 
 const createSnippetApi = async (data) => {
